@@ -1,15 +1,26 @@
 package com.exercises.hotelbooking.models;
 
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.validator.constraints.NotBlank;
+import org.springframework.data.cassandra.mapping.PrimaryKey;
+import org.springframework.data.cassandra.mapping.Table;
+
+import java.util.Date;
+import java.util.UUID;
+
+@Table("hotels")
 public class Hotel {
 
-    private String city;
+    @PrimaryKey
+    private @Getter @Setter UUID id;
 
-    public String getCity() {
-        return city;
-    }
+    @NotBlank(message = "Hotel name must not be blank!")
+    private @Getter @Setter String name;
 
-    public void setCity(final String city) {
-        this.city = city;
-    }
+    @NotBlank(message = "Hotel city must not be blank!")
+    private @Getter @Setter String city;
+
+    private @Getter @Setter Date added;
 
 }
