@@ -1,6 +1,6 @@
 package com.exercises.hotelbooking.controllers;
 
-import com.exercises.hotelbooking.models.ErrorEntity;
+import com.exercises.hotelbooking.entities.ErrorEntity;
 import org.springframework.boot.autoconfigure.web.ErrorController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

@@ -1,6 +1,6 @@
 package com.exercises.hotelbooking.exceptions;
 
-import com.exercises.hotelbooking.models.ErrorEntity;
+import com.exercises.hotelbooking.entities.ErrorEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpHeaders;

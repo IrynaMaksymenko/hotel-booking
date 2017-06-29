@@ -10,3 +10,6 @@ To drop keyspace with all tables execute
 
 To launch application execute 
 `mvn spring-boot:run`.
+
+To run integration test following steps of simple application workflow execute
+`mvn clean install -Pintegration-test`

@@ -3,11 +3,11 @@ package com.exercises.hotelbooking.database;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.Session;
+import org.springframework.cassandra.core.Ordering;
 import org.springframework.data.cassandra.core.CassandraTemplate;
 
 import java.util.Properties;
 
-import static org.springframework.cassandra.core.keyspace.CreateIndexSpecification.createIndex;
 import static org.springframework.cassandra.core.keyspace.CreateKeyspaceSpecification.createKeyspace;
 import static org.springframework.cassandra.core.keyspace.CreateTableSpecification.createTable;
 
@@ -18,9 +18,17 @@ public class DatabaseInitializer {
         Properties applicationProperties = new Properties();
         applicationProperties.load(DatabaseInitializer.class.getClassLoader()
                 .getResourceAsStream("application.properties"));
+        final String keyspaceName = applicationProperties.getProperty("spring.data.cassandra.keyspace-name");
+
+        initialize(keyspaceName);
+    }
+
+    public static void initialize(String keyspaceName) throws Exception {
+        Properties applicationProperties = new Properties();
+        applicationProperties.load(DatabaseInitializer.class.getClassLoader()
+                .getResourceAsStream("application.properties"));
         final Integer port = Integer.valueOf(applicationProperties.getProperty("spring.data.cassandra.port"));
         final String contactPoint = applicationProperties.getProperty("spring.data.cassandra.contact-points");
-        final String keyspaceName = applicationProperties.getProperty("spring.data.cassandra.keyspace-name");
 
         Cluster cluster = null;
         try {
@@ -41,39 +49,61 @@ public class DatabaseInitializer {
         cassandraTemplate.execute("USE " + keyspaceName);
 
         cassandraTemplate.execute(createTable("hotels").ifNotExists()
-                .partitionKeyColumn("id", DataType.uuid())
+                .partitionKeyColumn("hotel_id", DataType.uuid())
                 .column("city", DataType.text())
                 .column("name", DataType.text())
-                .column("added", DataType.timestamp())
+                .column("address", DataType.text())
+                .column("rating", DataType.cint())
         );
-        cassandraTemplate.execute(createIndex("hotels_city").ifNotExists().tableName("hotels").columnName("city"));
+
+        cassandraTemplate.execute(createTable("hotels_by_city").ifNotExists()
+                .partitionKeyColumn("city", DataType.text())
+                .clusteredKeyColumn("hotel_id", DataType.uuid())
+                .column("name", DataType.text())
+                .column("address", DataType.text())
+                .column("rating", DataType.cint())
+        );
 
         cassandraTemplate.execute(createTable("rooms").ifNotExists()
-                .partitionKeyColumn("id", DataType.uuid())
-                .column("hotelId", DataType.uuid())
-                .column("roomNumber", DataType.cint())
-                .column("roomClass", DataType.text())
+                .partitionKeyColumn("hotel_id", DataType.uuid())
+                .clusteredKeyColumn("room_id", DataType.uuid())
+                .column("room_type", DataType.text())
+                .column("facilities", DataType.list(DataType.text()))
         );
-        cassandraTemplate.execute(createIndex("rooms_hotel").ifNotExists().tableName("rooms").columnName("hotelId"));
-        cassandraTemplate.execute(createIndex("rooms_class").ifNotExists().tableName("rooms").columnName("roomClass"));
 
         cassandraTemplate.execute(createTable("guests").ifNotExists()
-                .partitionKeyColumn("id", DataType.uuid())
-                .column("firstName", DataType.text())
-                .column("lastName", DataType.text())
-                .column("phoneNumber", DataType.text())
+                .partitionKeyColumn("guest_id", DataType.uuid())
+                .column("first_name", DataType.text())
+                .column("last_name", DataType.text())
+                .column("phone_number", DataType.text())
                 .column("email", DataType.text())
         );
 
-        cassandraTemplate.execute(createTable("bookings").ifNotExists()
-                .partitionKeyColumn("id", DataType.uuid())
-                .column("roomId", DataType.text())
-                .column("guestId", DataType.text())
-                .column("start", DataType.timestamp())
-                .column("end", DataType.timestamp())
+        cassandraTemplate.execute(createTable("bookings_by_guest").ifNotExists()
+                .partitionKeyColumn("guest_id", DataType.uuid())
+                .clusteredKeyColumn("start", DataType.bigint(), Ordering.DESCENDING)
+                .clusteredKeyColumn("booking_id", DataType.uuid())
+                .column("end", DataType.bigint())
+                .column("hotel_id", DataType.uuid())
+                .column("room_id", DataType.uuid())
         );
-        cassandraTemplate.execute(createIndex("bookings_guest").ifNotExists().tableName("bookings").columnName("guestId"));
-        cassandraTemplate.execute(createIndex("bookings_start").ifNotExists().tableName("bookings").columnName("start"));
-        cassandraTemplate.execute(createIndex("bookings_end").ifNotExists().tableName("bookings").columnName("end"));
+
+        cassandraTemplate.execute(createTable("bookings_by_start").ifNotExists()
+                .partitionKeyColumn("hotel_id", DataType.uuid())
+                .clusteredKeyColumn("start", DataType.bigint(), Ordering.DESCENDING)
+                .clusteredKeyColumn("booking_id", DataType.uuid())
+                .column("end", DataType.bigint())
+                .column("guest_id", DataType.uuid())
+                .column("room_id", DataType.uuid())
+        );
+
+        cassandraTemplate.execute(createTable("bookings_by_end").ifNotExists()
+                .partitionKeyColumn("hotel_id", DataType.uuid())
+                .clusteredKeyColumn("end", DataType.bigint(), Ordering.DESCENDING)
+                .clusteredKeyColumn("booking_id", DataType.uuid())
+                .column("start", DataType.bigint())
+                .column("guest_id", DataType.uuid())
+                .column("room_id", DataType.uuid())
+        );
     }
 }

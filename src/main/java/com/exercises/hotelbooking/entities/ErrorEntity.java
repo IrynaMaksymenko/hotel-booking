@@ -1,4 +1,4 @@
-package com.exercises.hotelbooking.models;
+package com.exercises.hotelbooking.entities;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

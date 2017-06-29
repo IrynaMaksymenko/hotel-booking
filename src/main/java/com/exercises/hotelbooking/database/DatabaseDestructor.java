@@ -4,6 +4,7 @@ import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 import org.springframework.data.cassandra.core.CassandraTemplate;
 
+import java.io.IOException;
 import java.util.Properties;
 
 import static org.springframework.cassandra.core.keyspace.DropKeyspaceSpecification.dropKeyspace;
@@ -14,9 +15,17 @@ public class DatabaseDestructor {
         Properties applicationProperties = new Properties();
         applicationProperties.load(DatabaseInitializer.class.getClassLoader()
                 .getResourceAsStream("application.properties"));
+        final String keyspaceName = applicationProperties.getProperty("spring.data.cassandra.keyspace-name");
+
+        destroy(keyspaceName);
+    }
+
+    public static void destroy(String keyspaceName) throws IOException {
+        Properties applicationProperties = new Properties();
+        applicationProperties.load(DatabaseInitializer.class.getClassLoader()
+                .getResourceAsStream("application.properties"));
         final Integer port = Integer.valueOf(applicationProperties.getProperty("spring.data.cassandra.port"));
         final String contactPoint = applicationProperties.getProperty("spring.data.cassandra.contact-points");
-        final String keyspaceName = applicationProperties.getProperty("spring.data.cassandra.keyspace-name");
 
         Cluster cluster = null;
         try {
