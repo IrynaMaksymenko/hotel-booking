@@ -4,6 +4,8 @@ import com.exercises.hotelbooking.entities.BookingEntity;
 import com.exercises.hotelbooking.entities.GuestEntity;
 import com.exercises.hotelbooking.entities.HotelEntity;
 import com.exercises.hotelbooking.entities.RoomEntity;
+import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,11 +14,16 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequest;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
+import java.io.IOException;
+import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -25,30 +32,54 @@ import java.util.stream.Collectors;
 import static com.google.common.collect.Lists.newArrayList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.runners.MethodSorters.NAME_ASCENDING;
 
+@FixMethodOrder(NAME_ASCENDING)
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class BookingWorkflowTest {
+public class BookingWorkflowIT {
+
+    private static final String EMAIL = "test@exercise.com";
+    private static final String PASSWORD = "test";
 
     @Autowired
     private TestRestTemplate restTemplate;
 
-    // TODO: clean up database before and after test, use test keyspace?
-    @Test
-    public void workflowTest() {
+    private ClientHttpRequestFactory defaultRequestFactory;
 
-        // FIND HOTEL IN LVIV
-        final UUID hotelId = hotelCanBeAddedAndFound();
+    // TODO: clean up database before and after test, use test keyspace?
+    @Before
+    public void setUp() {
+        defaultRequestFactory = restTemplate.getRestTemplate().getRequestFactory();
+    }
+
+    @Test
+    public void adminWorkflowTest() {
+        login("admin", "admin");
+
+        // ADD NEW HOTEL
+        final UUID hotelId = adminCanAddNewHotel();
 
         // ADD ROOMS
-        roomsCanBeAdded(hotelId);
+        adminCanAddRooms(hotelId);
+
+        logout();
+    }
+
+    @Test
+    public void userWorkflowTest() {
+
+        // ADD GUEST
+        final UUID guestId = guestCanBeAdded(EMAIL, PASSWORD);
+
+        login(EMAIL, PASSWORD);
+
+        // FIND HOTEL IN LVIV
+        final UUID hotelId = userCanFindAHotel();
 
         // GET FREE ROOMS
         final List<UUID> freeRooms = getFreeRooms(hotelId);
         assertThat(freeRooms, hasSize(greaterThanOrEqualTo(2)));
-
-        // ADD GUEST
-        final UUID guestId = guestCanBeAdded();
 
         // ADD BOOKING
         final UUID bookedRoomId = freeRooms.get(0);
@@ -63,34 +94,72 @@ public class BookingWorkflowTest {
         // GET FREE ROOMS
         final List<UUID> leftRooms = getFreeRooms(hotelId);
         assertThat(leftRooms, hasSize(freeRooms.size() - 1));
+
+        logout();
     }
 
-    private UUID hotelCanBeAddedAndFound() {
+    private void login(String username, String password) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
+        map.add("username", username);
+        map.add("password", password);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity("/login", request , String.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.FOUND));
+        assertThat(response.getHeaders(), hasEntry(equalTo("Location"), contains(endsWith("/info"))));
+
+        final List<String> cookies = response.getHeaders().get("Set-Cookie");
+        assertThat(cookies, not(empty()));
+        final String jsessionid = cookies.get(0).substring(0, cookies.get(0).indexOf(";"));
+        // use jsession id for all further requests
+        restTemplate.getRestTemplate().setRequestFactory(new SimpleClientHttpRequestFactory() {
+            @Override
+            public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) throws IOException {
+                final ClientHttpRequest clientHttpRequest = super.createRequest(uri, httpMethod);
+                clientHttpRequest.getHeaders().add("Cookie", jsessionid);
+                return clientHttpRequest;
+            }
+        });
+    }
+
+    private void logout() {
+        ResponseEntity<String> response = restTemplate.postForEntity("/logout", null, String.class);
+        assertThat(response.getStatusCode(), is(HttpStatus.FOUND));
+        restTemplate.getRestTemplate().setRequestFactory(defaultRequestFactory);
+    }
+
+    private UUID userCanFindAHotel() {
         ResponseEntity<HotelEntity> hotelsResponse = restTemplate.getForEntity("/hotels?city=Lviv", HotelEntity.class);
         assertThat(hotelsResponse.getStatusCode(), is(HttpStatus.OK));
-
-        if (hotelsResponse.getBody().getHotels().isEmpty()) {
-            // ADD NEW HOTEL
-            final HotelEntity request = new HotelEntity();
-            final HotelEntity.Hotel newHotel = new HotelEntity.Hotel();
-            newHotel.setName("Astoria");
-            newHotel.setAddress("Horodotska Str");
-            newHotel.setRating(4);
-            request.setHotels(newArrayList(newHotel));
-            ResponseEntity<HotelEntity> addHotelResponse =
-                    restTemplate.postForEntity("/hotels", request, HotelEntity.class);
-            assertThat(addHotelResponse.getStatusCode(), is(HttpStatus.OK));
-            assertThat(addHotelResponse.getBody().getHotels(), hasItem(hasProperty("id", notNullValue())));
-
-            hotelsResponse = restTemplate.getForEntity("/hotels?city=Lviv", HotelEntity.class);
-            assertThat(hotelsResponse.getStatusCode(), is(HttpStatus.OK));
-            assertThat(hotelsResponse.getBody().getHotels(), hasSize(greaterThanOrEqualTo(1)));
-        }
 
         return hotelsResponse.getBody().getHotels().get(0).getId();
     }
 
-    private void roomsCanBeAdded(UUID hotelId) {
+    private UUID adminCanAddNewHotel() {
+        ResponseEntity<HotelEntity> hotelsResponse;
+        final HotelEntity request = new HotelEntity();
+        final HotelEntity.Hotel newHotel = new HotelEntity.Hotel();
+        newHotel.setCity("Lviv");
+        newHotel.setName("Astoria");
+        newHotel.setAddress("Horodotska Str");
+        newHotel.setRating(4);
+        request.setHotels(newArrayList(newHotel));
+        ResponseEntity<HotelEntity> addHotelResponse =
+                restTemplate.postForEntity("/hotels", request, HotelEntity.class);
+        assertThat(addHotelResponse.getStatusCode(), is(HttpStatus.OK));
+        assertThat(addHotelResponse.getBody().getHotels(), hasItem(hasProperty("id", notNullValue())));
+
+        hotelsResponse = restTemplate.getForEntity("/hotels?city=Lviv", HotelEntity.class);
+        assertThat(hotelsResponse.getStatusCode(), is(HttpStatus.OK));
+        assertThat(hotelsResponse.getBody().getHotels(), hasSize(greaterThanOrEqualTo(1)));
+        return hotelsResponse.getBody().getHotels().get(0).getId();
+    }
+
+    private void adminCanAddRooms(UUID hotelId) {
         // ADD NEW ROOMS
         final RoomEntity request = new RoomEntity();
         final RoomEntity.Room room1 = new RoomEntity.Room();
@@ -119,13 +188,14 @@ public class BookingWorkflowTest {
                 .collect(Collectors.toList());
     }
 
-    private UUID guestCanBeAdded() {
+    private UUID guestCanBeAdded(String email, String password) {
         final GuestEntity request = new GuestEntity();
         final GuestEntity.Guest guest = new GuestEntity.Guest();
         guest.setFirstName("Irina");
         guest.setLastName("Maximenko");
         guest.setPhoneNumber("0631234567");
-        guest.setEmail("test@exercise.com");
+        guest.setEmail(email);
+        guest.setPassword(password);
         request.setGuests(newArrayList(guest));
 
         ResponseEntity<GuestEntity> response = restTemplate.postForEntity("/guests", request, GuestEntity.class);

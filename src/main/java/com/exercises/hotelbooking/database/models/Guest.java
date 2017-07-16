@@ -1,13 +1,10 @@
 package com.exercises.hotelbooking.database.models;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import org.springframework.data.cassandra.mapping.Column;
-import org.springframework.data.cassandra.mapping.PrimaryKey;
-import org.springframework.data.cassandra.mapping.Table;
+import lombok.*;
+import org.springframework.cassandra.core.PrimaryKeyType;
+import org.springframework.data.cassandra.mapping.*;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 @AllArgsConstructor
@@ -15,8 +12,8 @@ import java.util.UUID;
 @Table("guests")
 public class Guest {
 
-    @PrimaryKey("guest_id")
-    private @Getter @Setter UUID id;
+    @PrimaryKey
+    private @Getter @Setter GuestKey key;
 
     @Column("first_name")
     private @Getter @Setter String firstName;
@@ -27,7 +24,21 @@ public class Guest {
     @Column("phone_number")
     private @Getter @Setter String phoneNumber;
 
-    @Column("email")
-    private @Getter @Setter String email;
+    @Column("password_hash")
+    private @Getter @Setter String passwordHash;
+
+    @AllArgsConstructor
+    @EqualsAndHashCode
+    @PrimaryKeyClass
+    public static class GuestKey implements Serializable {
+
+        @PrimaryKeyColumn(name = "email", ordinal = 0, type = PrimaryKeyType.PARTITIONED)
+        private @Getter @Setter String email;
+
+        @PrimaryKeyColumn(name = "guest_id", ordinal = 1, type = PrimaryKeyType.CLUSTERED)
+        private @Getter @Setter UUID id;
+
+    }
+
 
 }

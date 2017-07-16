@@ -40,11 +40,20 @@ public class HotelBookingService {
         return roomId;
     }
 
-    public UUID saveGuest(String firstName, String lastName, String phoneNumber, String email) {
+    public UUID saveGuest(String firstName, String lastName, String phoneNumber, String email, String passwordHash) {
         log.debug("Adding a new guest {} {}", firstName, lastName);
-        final UUID guestId = UUIDs.random();
-        cassandraTemplate.insert(new Guest(guestId, firstName, lastName, phoneNumber, email));
+        final Guest guest = findGuest(email);
+        final UUID guestId = guest != null ? guest.getKey().getId() : UUIDs.random();
+        cassandraTemplate.update(new Guest(new Guest.GuestKey(email, guestId),
+                firstName, lastName, phoneNumber, passwordHash));
         return guestId;
+    }
+
+    public Guest findGuest(String email) {
+        return cassandraTemplate.selectOne(
+                select().from("guests")
+                        .where(eq("email", email))
+                        .toString(), Guest.class);
     }
 
     public List<HotelByCity> getHotelsByCity(String city) {

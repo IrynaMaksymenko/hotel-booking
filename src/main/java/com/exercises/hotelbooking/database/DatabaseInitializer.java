@@ -72,11 +72,12 @@ public class DatabaseInitializer {
         );
 
         cassandraTemplate.execute(createTable("guests").ifNotExists()
-                .partitionKeyColumn("guest_id", DataType.uuid())
+                .partitionKeyColumn("email", DataType.text())
+                .clusteredKeyColumn("guest_id", DataType.uuid())
                 .column("first_name", DataType.text())
                 .column("last_name", DataType.text())
                 .column("phone_number", DataType.text())
-                .column("email", DataType.text())
+                .column("password_hash", DataType.text())
         );
 
         cassandraTemplate.execute(createTable("bookings_by_guest").ifNotExists()

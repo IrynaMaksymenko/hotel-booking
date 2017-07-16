@@ -6,6 +6,8 @@ import com.exercises.hotelbooking.services.HotelBookingService;
 import org.hibernate.validator.constraints.ParameterScriptAssert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.annotation.Secured;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
@@ -21,6 +23,9 @@ import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
 @RestController
 public class HotelBookingController {
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private HotelBookingService service;
@@ -44,6 +49,7 @@ public class HotelBookingController {
     /**
      * Adds new hotel(s) to the system.
      */
+    @Secured("ROLE_ADMIN")
     @RequestMapping(value = "/hotels", method = RequestMethod.POST)
     public HotelEntity addHotel(@Valid @RequestBody HotelEntity hotelEntity) {
         for (HotelEntity.Hotel hotel : hotelEntity.getHotels()) {
@@ -57,6 +63,7 @@ public class HotelBookingController {
     /**
      * Adds new room(s) to a hotel.
      */
+    @Secured("ROLE_ADMIN")
     @RequestMapping(value = "/rooms", method = RequestMethod.POST)
     public RoomEntity addRoom(@Valid @RequestBody RoomEntity roomEntity) {
         for (RoomEntity.Room room : roomEntity.getRooms()) {
@@ -92,8 +99,10 @@ public class HotelBookingController {
     public GuestEntity addGuest(@Valid @RequestBody GuestEntity guestEntity) {
         for (GuestEntity.Guest guest : guestEntity.getGuests()) {
             final UUID guestId = service.saveGuest(
-                    guest.getFirstName(), guest.getLastName(), guest.getPhoneNumber(), guest.getEmail());
+                    guest.getFirstName(), guest.getLastName(), guest.getPhoneNumber(), guest.getEmail(),
+                    passwordEncoder.encode(guest.getPassword()));
             guest.setId(guestId);
+            guest.setPassword(null);
         }
         return guestEntity;
     }

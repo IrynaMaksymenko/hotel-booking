@@ -1,5 +1,6 @@
 package com.exercises.hotelbooking.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.validator.constraints.Email;
@@ -32,6 +33,9 @@ public class GuestEntity {
 
         @Email
         private @Getter @Setter String email;
+
+        @NotBlank(message = "Guest password must not be blank!")
+        private @Getter @Setter String password;
 
     }
 

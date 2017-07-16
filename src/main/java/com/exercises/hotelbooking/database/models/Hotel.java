@@ -13,7 +13,7 @@ import java.util.UUID;
 public class Hotel {
 
     @PrimaryKey(value = "hotel_id")
-    private @Getter @Setter UUID id;
+    private @Getter @Setter UUID hotelId;
 
     private @Getter @Setter String name;
 
