@@ -56,6 +56,10 @@ public class HotelBookingService {
                         .toString(), Guest.class);
     }
 
+    public List<Guest> findGuests() {
+        return cassandraTemplate.selectAll(Guest.class);
+    }
+
     public List<HotelByCity> getHotelsByCity(String city) {
         log.debug("Retrieving hotels in {}", city);
         return cassandraTemplate.select(

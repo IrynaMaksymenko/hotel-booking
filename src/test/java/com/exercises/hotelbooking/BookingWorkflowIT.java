@@ -4,6 +4,7 @@ import com.exercises.hotelbooking.entities.BookingEntity;
 import com.exercises.hotelbooking.entities.GuestEntity;
 import com.exercises.hotelbooking.entities.HotelEntity;
 import com.exercises.hotelbooking.entities.RoomEntity;
+import org.apache.tomcat.util.codec.binary.Base64;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -14,16 +15,17 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.*;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.ClientHttpRequest;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -99,36 +101,21 @@ public class BookingWorkflowIT {
     }
 
     private void login(String username, String password) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-        MultiValueMap<String, String> map = new LinkedMultiValueMap<>();
-        map.add("username", username);
-        map.add("password", password);
-
-        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
-
-        ResponseEntity<String> response = restTemplate.postForEntity("/login", request , String.class);
-        assertThat(response.getStatusCode(), is(HttpStatus.FOUND));
-        assertThat(response.getHeaders(), hasEntry(equalTo("Location"), contains(endsWith("/info"))));
-
-        final List<String> cookies = response.getHeaders().get("Set-Cookie");
-        assertThat(cookies, not(empty()));
-        final String jsessionid = cookies.get(0).substring(0, cookies.get(0).indexOf(";"));
-        // use jsession id for all further requests
+        String auth = username + ":" + password;
+        byte[] encodedAuth = Base64.encodeBase64(
+                auth.getBytes(Charset.forName("US-ASCII")) );
+        String authHeader = "Basic " + new String( encodedAuth );
         restTemplate.getRestTemplate().setRequestFactory(new SimpleClientHttpRequestFactory() {
             @Override
             public ClientHttpRequest createRequest(URI uri, HttpMethod httpMethod) throws IOException {
                 final ClientHttpRequest clientHttpRequest = super.createRequest(uri, httpMethod);
-                clientHttpRequest.getHeaders().add("Cookie", jsessionid);
+                clientHttpRequest.getHeaders().add("Authorization", authHeader);
                 return clientHttpRequest;
             }
         });
     }
 
     private void logout() {
-        ResponseEntity<String> response = restTemplate.postForEntity("/logout", null, String.class);
-        assertThat(response.getStatusCode(), is(HttpStatus.FOUND));
         restTemplate.getRestTemplate().setRequestFactory(defaultRequestFactory);
     }
 

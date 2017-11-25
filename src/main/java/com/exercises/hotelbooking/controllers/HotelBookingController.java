@@ -1,8 +1,11 @@
 package com.exercises.hotelbooking.controllers;
 
+import com.exercises.hotelbooking.database.models.Guest;
 import com.exercises.hotelbooking.database.models.Room;
 import com.exercises.hotelbooking.entities.*;
 import com.exercises.hotelbooking.services.HotelBookingService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.hibernate.validator.constraints.ParameterScriptAssert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 import static com.exercises.hotelbooking.services.Dates.*;
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 
+@Api(tags = "Hotel Booking", description = " ")
 @RestController
 public class HotelBookingController {
 
@@ -30,9 +34,7 @@ public class HotelBookingController {
     @Autowired
     private HotelBookingService service;
 
-    /**
-     * Get all hotels of a current city.
-     */
+    @ApiOperation("Retrieve all known hotels by city")
     @RequestMapping(value = "/hotels", method = RequestMethod.GET)
     public HotelEntity getHotels(@RequestParam String city) {
         final HotelEntity result = new HotelEntity();
@@ -46,9 +48,7 @@ public class HotelBookingController {
         return result;
     }
 
-    /**
-     * Adds new hotel(s) to the system.
-     */
+    @ApiOperation("Add new hotel(s) to the system (requires admin privileges)")
     @Secured("ROLE_ADMIN")
     @RequestMapping(value = "/hotels", method = RequestMethod.POST)
     public HotelEntity addHotel(@Valid @RequestBody HotelEntity hotelEntity) {
@@ -60,9 +60,7 @@ public class HotelBookingController {
         return hotelEntity;
     }
 
-    /**
-     * Adds new room(s) to a hotel.
-     */
+    @ApiOperation("Add new room(s) to a hotel (requires admin privileges)")
     @Secured("ROLE_ADMIN")
     @RequestMapping(value = "/rooms", method = RequestMethod.POST)
     public RoomEntity addRoom(@Valid @RequestBody RoomEntity roomEntity) {
@@ -73,9 +71,7 @@ public class HotelBookingController {
         return roomEntity;
     }
 
-    /**
-     * Gets free rooms in a specific hotel for the current period.
-     */
+    @ApiOperation("Retrieve free rooms in a specific hotel for the given period")
     @RequestMapping(value = "/rooms", method = RequestMethod.GET)
     @ParameterScriptAssert(lang = "javascript", script = "arg1.isBefore(arg2)",
             message = "Booking start must be before end!")
@@ -92,9 +88,7 @@ public class HotelBookingController {
         return result;
     }
 
-    /**
-     * Adds a new guest(s), who is going to book a room.
-     */
+    @ApiOperation("Add a new guest(s), who is going to book a room")
     @RequestMapping(value = "/guests", method = RequestMethod.POST)
     public GuestEntity addGuest(@Valid @RequestBody GuestEntity guestEntity) {
         for (GuestEntity.Guest guest : guestEntity.getGuests()) {
@@ -107,9 +101,23 @@ public class HotelBookingController {
         return guestEntity;
     }
 
-    /**
-     * Guest has booked some room / rooms. Gets booked room / rooms by the specific date and guest number.
-     */
+    @ApiOperation("Retrieve all guests (requires admin privileges)")
+    @Secured("ROLE_ADMIN")
+    @RequestMapping(value = "/guests", method = RequestMethod.GET)
+    public GuestEntity getGuests() {
+        GuestEntity guestEntity = new GuestEntity();
+        for (Guest guest : service.findGuests()) {
+            final GuestEntity.Guest aGuest = new GuestEntity.Guest();
+            aGuest.setId(guest.getKey().getId());
+            aGuest.setEmail(guest.getKey().getEmail());
+            aGuest.setFirstName(guest.getFirstName());
+            aGuest.setLastName(guest.getLastName());
+            guestEntity.getGuests().add(aGuest);
+        }
+        return guestEntity;
+    }
+
+    @ApiOperation("Guest has booked some room(s). Gets booked room(s) by the specific date and guest number")
     @RequestMapping(value = "/bookings", method = RequestMethod.GET)
     public BookingEntity getBookings(@RequestParam UUID guestId,
                                      @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
@@ -128,9 +136,7 @@ public class HotelBookingController {
         return result;
     }
 
-    /**
-     * Adds a new room booking for a guest.
-     */
+    @ApiOperation("Add a new room booking for a guest")
     @RequestMapping(value = "/bookings", method = RequestMethod.POST)
     public BookingEntity bookRoom(@Valid @RequestBody BookingEntity bookingEntity) {
 
