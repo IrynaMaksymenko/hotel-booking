@@ -3,6 +3,7 @@ package com.exercises.hotelbooking.entities;
 import lombok.*;
 import org.hibernate.validator.constraints.NotBlank;
 import org.hibernate.validator.constraints.NotEmpty;
+import org.hibernate.validator.constraints.Range;
 
 import javax.validation.constraints.Null;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class HotelEntity {
         @NotBlank(message = "Hotel address must not be blank!")
         private @Getter @Setter String address;
 
+        @Range(message = "Rating should be in range 1..5", min = 1, max = 5)
         private @Getter @Setter int rating;
 
     }

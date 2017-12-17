@@ -9,7 +9,6 @@ import io.swagger.annotations.ApiOperation;
 import org.hibernate.validator.constraints.ParameterScriptAssert;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.security.access.annotation.Secured;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,7 +48,6 @@ public class HotelBookingController {
     }
 
     @ApiOperation("Add new hotel(s) to the system (requires admin privileges)")
-    @Secured("ROLE_ADMIN")
     @RequestMapping(value = "/hotels", method = RequestMethod.POST)
     public HotelEntity addHotel(@Valid @RequestBody HotelEntity hotelEntity) {
         for (HotelEntity.Hotel hotel : hotelEntity.getHotels()) {
@@ -61,7 +59,6 @@ public class HotelBookingController {
     }
 
     @ApiOperation("Add new room(s) to a hotel (requires admin privileges)")
-    @Secured("ROLE_ADMIN")
     @RequestMapping(value = "/rooms", method = RequestMethod.POST)
     public RoomEntity addRoom(@Valid @RequestBody RoomEntity roomEntity) {
         for (RoomEntity.Room room : roomEntity.getRooms()) {
@@ -76,8 +73,8 @@ public class HotelBookingController {
     @ParameterScriptAssert(lang = "javascript", script = "arg1.isBefore(arg2)",
             message = "Booking start must be before end!")
     public RoomEntity getFreeRooms(@RequestParam UUID hotelId,
-                                   @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate start,
-                                   @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end) {
+                                   @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate start,
+                                   @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate end) {
         final List<Room> freeRooms = service.getFreeRoomsByHotelAndPeriod(hotelId, start, end);
         final RoomEntity result = new RoomEntity();
         result.setRooms(freeRooms.stream()
@@ -102,7 +99,6 @@ public class HotelBookingController {
     }
 
     @ApiOperation("Retrieve all guests (requires admin privileges)")
-    @Secured("ROLE_ADMIN")
     @RequestMapping(value = "/guests", method = RequestMethod.GET)
     public GuestEntity getGuests() {
         GuestEntity guestEntity = new GuestEntity();
@@ -120,7 +116,7 @@ public class HotelBookingController {
     @ApiOperation("Guest has booked some room(s). Gets booked room(s) by the specific date and guest number")
     @RequestMapping(value = "/bookings", method = RequestMethod.GET)
     public BookingEntity getBookings(@RequestParam UUID guestId,
-                                     @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+                                     @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate date) {
         BookingEntity result = new BookingEntity();
         result.setBookings(service.getBookings(guestId, date)
                 .stream()

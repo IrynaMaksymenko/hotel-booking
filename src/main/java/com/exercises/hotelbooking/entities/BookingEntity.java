@@ -1,5 +1,7 @@
 package com.exercises.hotelbooking.entities;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,6 +16,8 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import static com.fasterxml.jackson.annotation.JsonFormat.Shape.STRING;
 
 public class BookingEntity {
 
@@ -40,15 +44,23 @@ public class BookingEntity {
         private @Getter @Setter UUID guestId;
 
         @NotNull(message = "Booking start must not be blank!")
+        @JsonFormat(shape = STRING, pattern = "dd-MM-yyyy")
+        @ApiModelProperty(example = "13-12-2017")
         private @Getter @Setter LocalDate start;
 
         @Null(message = "Check in time is read only")
+        @JsonFormat(shape = STRING, pattern = "HH:mm")
+        @ApiModelProperty(example = "14:00")
         private @Getter @Setter LocalTime checkInTime;
 
         @NotNull(message = "Booking end must not be blank!")
+        @JsonFormat(shape = STRING, pattern = "dd-MM-yyyy")
+        @ApiModelProperty(example = "15-12-2017")
         private @Getter @Setter LocalDate end;
 
         @Null(message = "Check out time is read only")
+        @JsonFormat(shape = STRING, pattern = "HH:mm")
+        @ApiModelProperty(example = "12:00")
         private @Getter @Setter LocalTime checkOutTime;
 
     }

@@ -1,5 +1,6 @@
 package com.exercises.hotelbooking.entities;
 
+import io.swagger.annotations.ApiModelProperty;
 import lombok.*;
 import org.hibernate.validator.constraints.NotBlank;
 
@@ -26,6 +27,7 @@ public class RoomEntity {
         @NotBlank(message = "Room type must not be blank!")
         private @Getter @Setter String roomType;
 
+        @ApiModelProperty(example = "[TV,WI-FI,fridge]")
         private @Getter @Setter List<String> facilities;
 
     }
